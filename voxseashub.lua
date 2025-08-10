@@ -1,16 +1,12 @@
 ---------------------------
--- GUI (estilo hub moderno com sidebar)  +  Fruit status
+-- GUI (estilo hub + abas)  + Fruit/Chest status ao vivo
 ---------------------------
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer or Players.PlayerAdded:Wait()
--- garante que sua variável global LocalPlayer esteja setada
 LocalPlayer = LocalPlayer or LP
 
 local playerGui = LP:WaitForChild("PlayerGui", 10)
-if not playerGui then
-    warn("[VoxSeasHub] PlayerGui não encontrado; abortando GUI.")
-    return
-end
+if not playerGui then warn("[VoxSeasHub] PlayerGui não encontrado; abort GUI") return end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "VoxSeasHub"
@@ -22,7 +18,7 @@ screenGui.Parent = playerGui
 local function mkCorner(i,r)local c=Instance.new("UICorner")c.CornerRadius=UDim.new(0,r or 12)c.Parent=i end
 local function mkStroke(i,t,tr,c)local s=Instance.new("UIStroke")s.Thickness=t or 1 s.Transparency=tr or 0.85 s.Color=c or Color3.fromRGB(200,200,200) s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border s.Parent=i end
 
--- root
+-- Root
 local root = Instance.new("Frame")
 root.Size = UDim2.new(0,620,0,380)
 root.Position = UDim2.fromScale(0.5,0.5)
@@ -31,7 +27,7 @@ root.BackgroundColor3 = Color3.fromRGB(19,19,23)
 root.Parent = screenGui
 mkCorner(root,14); mkStroke(root,1,0.85)
 
--- header
+-- Header
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1,0,0,38)
 header.BackgroundColor3 = Color3.fromRGB(24,24,28)
@@ -58,7 +54,7 @@ closeBtn.TextColor3 = Color3.fromRGB(230,230,230)
 closeBtn.Parent = header
 mkCorner(closeBtn,8)
 
--- body
+-- Body
 local body = Instance.new("Frame")
 body.Size = UDim2.new(1,-12,1,-50)
 body.Position = UDim2.new(0,6,0,44)
@@ -72,8 +68,7 @@ sidebar.Parent = body
 mkCorner(sidebar,10); mkStroke(sidebar,1,0.9)
 
 local sideLayout = Instance.new("UIListLayout")
-sideLayout.Padding = UDim.new(0,6)
-sideLayout.Parent = sidebar
+sideLayout.Padding = UDim.new(0,6); sideLayout.Parent = sidebar
 
 local content = Instance.new("Frame")
 content.Size = UDim2.new(1,-180,1,0)
@@ -82,7 +77,7 @@ content.BackgroundColor3 = Color3.fromRGB(22,22,27)
 content.Parent = body
 mkCorner(content,10); mkStroke(content,1,0.9)
 
--- helpers
+-- Helpers de página/controles
 local sections, currentSection = {}, nil
 local function addSection(name)
     local b = Instance.new("TextButton")
@@ -123,46 +118,28 @@ local function addSection(name)
     if not currentSection then
         currentSection = {btn=b,page=page}; b:Activate()
         for _,s in ipairs(sections) do s.page.Visible = (s==currentSection) end
-    else page.Visible=false end
+    else
+        page.Visible=false
+    end
     return page
 end
 
 local function addSwitch(parent,label,initial,cb)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1,-4,0,44)
-    f.BackgroundColor3 = Color3.fromRGB(30,30,36)
-    f.Parent = parent
+    local f = Instance.new("Frame"); f.Size = UDim2.new(1,-4,0,44); f.BackgroundColor3 = Color3.fromRGB(30,30,36); f.Parent = parent
     mkCorner(f,8); mkStroke(f,1,0.92)
-
-    local txt = Instance.new("TextLabel")
-    txt.BackgroundTransparency = 1
-    txt.Size = UDim2.new(1,-70,1,0)
-    txt.Position = UDim2.new(0,10,0,0)
-    txt.Font = Enum.Font.Gotham
-    txt.TextXAlignment = Enum.TextXAlignment.Left
-    txt.TextSize = 15
-    txt.Text = label
-    txt.TextColor3 = Color3.fromRGB(235,235,240)
-    txt.Parent = f
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,56,0,26)
-    btn.Position = UDim2.new(1,-64,0.5,-13)
-    btn.Text = initial and "ON" or "OFF"
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.BackgroundColor3 = initial and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74)
-    btn.Parent = f
-    mkCorner(btn,12); mkStroke(btn,1,0.9)
-
-    local state = initial
+    local txt = Instance.new("TextLabel"); txt.BackgroundTransparency=1; txt.Size=UDim2.new(1,-70,1,0); txt.Position=UDim2.new(0,10,0,0)
+    txt.Font=Enum.Font.Gotham; txt.TextXAlignment=Enum.TextXAlignment.Left; txt.TextSize=15; txt.Text=label; txt.TextColor3=Color3.fromRGB(235,235,240); txt.Parent=f
+    local btn = Instance.new("TextButton"); btn.Size=UDim2.new(0,56,0,26); btn.Position=UDim2.new(1,-64,0.5,-13)
+    btn.Text = initial and "ON" or "OFF"; btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.TextColor3=Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = initial and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74); btn.Parent=f; mkCorner(btn,12); mkStroke(btn,1,0.9)
+    local state=initial
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = state and "ON" or "OFF"
         btn.BackgroundColor3 = state and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74)
         if cb then cb(state) end
     end)
+    return {frame=f, button=btn, set=function(v) state=v; btn.Text=v and "ON" or "OFF"; btn.BackgroundColor3 = v and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74); if cb then cb(v) end end}
 end
 
 local function addButton(parent,label,cb)
@@ -174,48 +151,79 @@ local function addButton(parent,label,cb)
     b.Parent = parent
     mkCorner(b,8); mkStroke(b,1,0.92)
     b.MouseButton1Click:Connect(function() if cb then cb() end end)
+    return b
 end
 
--- Seções
+local function addLabel(parent, text)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Size = UDim2.new(1,-8,0,24)
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 15
+    l.TextColor3 = Color3.fromRGB(235,235,240)
+    l.Text = text or ""
+    l.Parent = parent
+    return l
+end
+
+-- ===== Abas =====
 local pageGeneral  = addSection("General")
 local pageTeleport = addSection("Teleport")
-local pageFruit    = addSection("Fruit")   -- NOVA aba
+local pageFruit    = addSection("Fruit")
+local pageChest    = addSection("Chest")
 
--- switches existentes
-addSwitch(pageGeneral,"Auto Farm (Auto Quest)",false,function(v) autoQuest=v end)
-addSwitch(pageGeneral,"Auto por Level/NextQuest",true,function(v) autoByLevel=v end)
-addSwitch(pageGeneral,"Auto Chest",false,function(v) autoChest=v end)
-addSwitch(pageGeneral,"Auto Fruit",false,function(v) autoFruit=v end)
+-- ===== GENERAL: toggles principais =====
+local swFarm   = addSwitch(pageGeneral,"Auto Farm (Auto Quest)",false,function(v) autoQuest=v end)
+local swByLvl  = addSwitch(pageGeneral,"Auto por Level/NextQuest",true,function(v) autoByLevel=v end)
+local swChest  = addSwitch(pageGeneral,"Auto Chest",false,function(v) autoChest=v end)
+local swFruit  = addSwitch(pageGeneral,"Auto Fruit",false,function(v) autoFruit=v end)
+addButton(pageGeneral,"Atualizar Spawns",function() refreshRoots() end)
 
--- FRUIT: label com nome + distância
-local fruitInfo = Instance.new("TextLabel")
-fruitInfo.BackgroundTransparency = 1
-fruitInfo.Size = UDim2.new(1,-8,0,24)
-fruitInfo.TextXAlignment = Enum.TextXAlignment.Left
-fruitInfo.Font = Enum.Font.Gotham
-fruitInfo.TextSize = 15
-fruitInfo.TextColor3 = Color3.fromRGB(235,235,240)
-fruitInfo.Text = "Procurando frutas..."
-fruitInfo.Parent = pageFruit
+-- ===== FRUIT: status ao vivo =====
+local fruitInfo = addLabel(pageFruit,"Procurando frutas...")
 
 local function nearestFruitText()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return "Aguardando personagem..." end
-    -- usa suas helpers já existentes no script:
     local node = findClosestFruit(hrp.Position, fruitNameFilter)
     if not node then return "Nenhuma fruta encontrada." end
     local part = node:IsA("BasePart") and node or node:FindFirstChildWhichIsA("BasePart")
-    if not part then return ("Fruta: %s (sem parte)").format(tostring(node.Name or "?")) end
-    local d = math.floor( (part.Position - hrp.Position).Magnitude )
-    local name = tostring(node.Name or node:GetFullName() or "?")
-    return ("Fruta: %s | Distância: %dm"):format(name, d)
+    if not part then return ("Fruta: %s (sem parte)"):format(tostring(node.Name or "?")) end
+    local d = math.floor((part.Position - hrp.Position).Magnitude)
+    local n = tostring(node.Name or node:GetFullName() or "?")
+    return ("Fruta: %s | Distância: %dm"):format(n, d)
 end
 
--- Teleports
+-- ===== CHEST: identifica cofre spawnado + status =====
+local chestInfo = addLabel(pageChest,"Procurando cofres...")
+
+local function nearestChestText()
+    if not chestsRoot then return "ChestsRoot não encontrado." end
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return "Aguardando personagem..." end
+
+    local best, bestD, bestNode
+    for _,d in ipairs(chestsRoot:GetDescendants()) do
+        local part = d:IsA("BasePart") and d or d:FindFirstChildWhichIsA("BasePart")
+        if part and part:IsDescendantOf(chestsRoot) and part:IsA("BasePart") then
+            -- “spawnado” = existe no workspace + não destruído
+            local distVal = (part.Position - hrp.Position).Magnitude
+            if not bestD or distVal < bestD then best, bestD, bestNode = part, distVal, d end
+        end
+    end
+
+    if not best then return "Nenhum cofre spawnado no momento." end
+    local nm = tostring(bestNode.Name or "Chest")
+    return ("Cofre: %s | Distância: %dm"):format(nm, math.floor(bestD))
+end
+
+-- ===== TELEPORT: lista dinâmica =====
 local function repopulateTP()
     for _,c in ipairs(pageTeleport:GetChildren()) do
-        if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
+        if c:IsA("TextButton") then c:Destroy() end
     end
     if spawnPointsRoot then
         for _,d in ipairs(spawnPointsRoot:GetDescendants()) do
@@ -229,9 +237,8 @@ local function repopulateTP()
     end
 end
 repopulateTP()
-addButton(pageGeneral,"Atualizar Spawns",function() refreshRoots(); repopulateTP() end)
 
--- drag + minimiza
+-- Drag + minimizar
 do
     local dragging=false; local dragStart; local startPos
     header.InputBegan:Connect(function(input)
@@ -250,9 +257,8 @@ end
 
 closeBtn.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
 
--- Atualiza texto da fruta em tempo real
+-- ===== Atualizações em tempo real =====
 game:GetService("RunService").RenderStepped:Connect(function()
-    if fruitInfo and fruitInfo.Parent then
-        fruitInfo.Text = nearestFruitText()
-    end
+    if fruitInfo and fruitInfo.Parent then fruitInfo.Text = nearestFruitText() end
+    if chestInfo and chestInfo.Parent then chestInfo.Text = nearestChestText() end
 end)
