@@ -1,11 +1,7 @@
 ---------------------------
--- GUI (estilo hub + abas)  + Fruit/Chest status ao vivo
+-- GUI (hub moderno com sidebar) + Fruit/Chest status ao vivo
 ---------------------------
-local Players = game:GetService("Players")
-local LP = Players.LocalPlayer or Players.PlayerAdded:Wait()
-LocalPlayer = LocalPlayer or LP
-
-local playerGui = LP:WaitForChild("PlayerGui", 10)
+local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 if not playerGui then warn("[VoxSeasHub] PlayerGui não encontrado; abort GUI") return end
 
 local screenGui = Instance.new("ScreenGui")
@@ -68,7 +64,8 @@ sidebar.Parent = body
 mkCorner(sidebar,10); mkStroke(sidebar,1,0.9)
 
 local sideLayout = Instance.new("UIListLayout")
-sideLayout.Padding = UDim.new(0,6); sideLayout.Parent = sidebar
+sideLayout.Padding = UDim.new(0,6)
+sideLayout.Parent = sidebar
 
 local content = Instance.new("Frame")
 content.Size = UDim2.new(1,-180,1,0)
@@ -77,8 +74,17 @@ content.BackgroundColor3 = Color3.fromRGB(22,22,27)
 content.Parent = body
 mkCorner(content,10); mkStroke(content,1,0.9)
 
--- Helpers de página/controles
-local sections, currentSection = {}, nil
+-- ===== helpers de páginas/controles (sem :Activate) =====
+local sections = {}
+
+local function selectSection(btnToSelect)
+    for _,s in ipairs(sections) do
+        local active = (s.btn == btnToSelect)
+        s.page.Visible = active
+        s.btn.BackgroundColor3 = active and Color3.fromRGB(45,45,54) or Color3.fromRGB(32,32,38)
+    end
+end
+
 local function addSection(name)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(1,-12,0,38)
@@ -107,45 +113,66 @@ local function addSection(name)
     list.SortOrder = Enum.SortOrder.LayoutOrder
     list.Parent = page
 
-    table.insert(sections,{btn=b,page=page})
-    b.MouseButton1Click:Connect(function()
-        for _,s in ipairs(sections) do
-            s.page.Visible = (s.btn==b)
-            s.btn.BackgroundColor3 = s.btn==b and Color3.fromRGB(45,45,54) or Color3.fromRGB(32,32,38)
-        end
-    end)
-
-    if not currentSection then
-        currentSection = {btn=b,page=page}; b:Activate()
-        for _,s in ipairs(sections) do s.page.Visible = (s==currentSection) end
-    else
-        page.Visible=false
-    end
-    return page
+    table.insert(sections, {btn=b, page=page})
+    b.MouseButton1Click:Connect(function() selectSection(b) end)
+    page.Visible = false
+    return page, b
 end
 
 local function addSwitch(parent,label,initial,cb)
-    local f = Instance.new("Frame"); f.Size = UDim2.new(1,-4,0,44); f.BackgroundColor3 = Color3.fromRGB(30,30,36); f.Parent = parent
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1,-4,0,44)
+    f.BackgroundColor3 = Color3.fromRGB(30,30,36)
+    f.Parent = parent
     mkCorner(f,8); mkStroke(f,1,0.92)
-    local txt = Instance.new("TextLabel"); txt.BackgroundTransparency=1; txt.Size=UDim2.new(1,-70,1,0); txt.Position=UDim2.new(0,10,0,0)
-    txt.Font=Enum.Font.Gotham; txt.TextXAlignment=Enum.TextXAlignment.Left; txt.TextSize=15; txt.Text=label; txt.TextColor3=Color3.fromRGB(235,235,240); txt.Parent=f
-    local btn = Instance.new("TextButton"); btn.Size=UDim2.new(0,56,0,26); btn.Position=UDim2.new(1,-64,0.5,-13)
-    btn.Text = initial and "ON" or "OFF"; btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.TextColor3=Color3.fromRGB(255,255,255)
-    btn.BackgroundColor3 = initial and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74); btn.Parent=f; mkCorner(btn,12); mkStroke(btn,1,0.9)
-    local state=initial
+
+    local txt = Instance.new("TextLabel")
+    txt.BackgroundTransparency = 1
+    txt.Size = UDim2.new(1,-70,1,0)
+    txt.Position = UDim2.new(0,10,0,0)
+    txt.Font = Enum.Font.Gotham
+    txt.TextXAlignment = Enum.TextXAlignment.Left
+    txt.TextSize = 15
+    txt.Text = label
+    txt.TextColor3 = Color3.fromRGB(235,235,240)
+    txt.Parent = f
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,56,0,26)
+    btn.Position = UDim2.new(1,-64,0.5,-13)
+    btn.Text = initial and "ON" or "OFF"
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BackgroundColor3 = initial and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74)
+    btn.Parent = f
+    mkCorner(btn,12); mkStroke(btn,1,0.9)
+
+    local state = initial
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = state and "ON" or "OFF"
         btn.BackgroundColor3 = state and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74)
         if cb then cb(state) end
     end)
-    return {frame=f, button=btn, set=function(v) state=v; btn.Text=v and "ON" or "OFF"; btn.BackgroundColor3 = v and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74); if cb then cb(v) end end}
+
+    return {
+        frame=f, button=btn,
+        set=function(v)
+            state=v
+            btn.Text = v and "ON" or "OFF"
+            btn.BackgroundColor3 = v and Color3.fromRGB(50,120,60) or Color3.fromRGB(70,70,74)
+            if cb then cb(v) end
+        end
+    }
 end
 
 local function addButton(parent,label,cb)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(1,-4,0,42)
-    b.Text = label; b.Font = Enum.Font.Gotham; b.TextSize = 15
+    b.Text = label
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 15
     b.TextColor3 = Color3.fromRGB(235,235,240)
     b.BackgroundColor3 = Color3.fromRGB(30,30,36)
     b.Parent = parent
@@ -167,20 +194,20 @@ local function addLabel(parent, text)
     return l
 end
 
--- ===== Abas =====
-local pageGeneral  = addSection("General")
-local pageTeleport = addSection("Teleport")
-local pageFruit    = addSection("Fruit")
-local pageChest    = addSection("Chest")
+-- ===== Abas
+local pageGeneral,  btnGeneral  = addSection("General")
+local pageTeleport, btnTeleport = addSection("Teleport")
+local pageFruit,    btnFruit    = addSection("Fruit")
+local pageChest,    btnChest    = addSection("Chest")
 
--- ===== GENERAL: toggles principais =====
+-- ===== GENERAL: toggles principais
 local swFarm   = addSwitch(pageGeneral,"Auto Farm (Auto Quest)",false,function(v) autoQuest=v end)
 local swByLvl  = addSwitch(pageGeneral,"Auto por Level/NextQuest",true,function(v) autoByLevel=v end)
 local swChest  = addSwitch(pageGeneral,"Auto Chest",false,function(v) autoChest=v end)
 local swFruit  = addSwitch(pageGeneral,"Auto Fruit",false,function(v) autoFruit=v end)
 addButton(pageGeneral,"Atualizar Spawns",function() refreshRoots() end)
 
--- ===== FRUIT: status ao vivo =====
+-- ===== FRUIT: status ao vivo
 local fruitInfo = addLabel(pageFruit,"Procurando frutas...")
 
 local function nearestFruitText()
@@ -196,7 +223,7 @@ local function nearestFruitText()
     return ("Fruta: %s | Distância: %dm"):format(n, d)
 end
 
--- ===== CHEST: identifica cofre spawnado + status =====
+-- ===== CHEST: identifica cofre spawnado
 local chestInfo = addLabel(pageChest,"Procurando cofres...")
 
 local function nearestChestText()
@@ -208,8 +235,7 @@ local function nearestChestText()
     local best, bestD, bestNode
     for _,d in ipairs(chestsRoot:GetDescendants()) do
         local part = d:IsA("BasePart") and d or d:FindFirstChildWhichIsA("BasePart")
-        if part and part:IsDescendantOf(chestsRoot) and part:IsA("BasePart") then
-            -- “spawnado” = existe no workspace + não destruído
+        if part then
             local distVal = (part.Position - hrp.Position).Magnitude
             if not bestD or distVal < bestD then best, bestD, bestNode = part, distVal, d end
         end
@@ -220,7 +246,7 @@ local function nearestChestText()
     return ("Cofre: %s | Distância: %dm"):format(nm, math.floor(bestD))
 end
 
--- ===== TELEPORT: lista dinâmica =====
+-- ===== TELEPORT: lista dinâmica
 local function repopulateTP()
     for _,c in ipairs(pageTeleport:GetChildren()) do
         if c:IsA("TextButton") then c:Destroy() end
@@ -254,11 +280,13 @@ do
         end
     end)
 end
-
 closeBtn.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
 
--- ===== Atualizações em tempo real =====
+-- Atualizações em tempo real (labels Fruit/Chest)
 game:GetService("RunService").RenderStepped:Connect(function()
     if fruitInfo and fruitInfo.Parent then fruitInfo.Text = nearestFruitText() end
     if chestInfo and chestInfo.Parent then chestInfo.Text = nearestChestText() end
 end)
+
+-- Seleciona a aba inicial (SEM :Activate)
+selectSection(btnGeneral)
