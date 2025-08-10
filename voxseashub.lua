@@ -1,7 +1,16 @@
 ---------------------------
--- GUI (estilo hub moderno com sidebar)
+-- GUI (estilo hub moderno com sidebar)  +  Fruit status
 ---------------------------
-local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer or Players.PlayerAdded:Wait()
+-- garante que sua variável global LocalPlayer esteja setada
+LocalPlayer = LocalPlayer or LP
+
+local playerGui = LP:WaitForChild("PlayerGui", 10)
+if not playerGui then
+    warn("[VoxSeasHub] PlayerGui não encontrado; abortando GUI.")
+    return
+end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "VoxSeasHub"
@@ -168,14 +177,40 @@ local function addButton(parent,label,cb)
 end
 
 -- Seções
-local pageGeneral = addSection("General")
+local pageGeneral  = addSection("General")
 local pageTeleport = addSection("Teleport")
+local pageFruit    = addSection("Fruit")   -- NOVA aba
 
--- ligações às variáveis que você já tem no script
+-- switches existentes
 addSwitch(pageGeneral,"Auto Farm (Auto Quest)",false,function(v) autoQuest=v end)
 addSwitch(pageGeneral,"Auto por Level/NextQuest",true,function(v) autoByLevel=v end)
 addSwitch(pageGeneral,"Auto Chest",false,function(v) autoChest=v end)
 addSwitch(pageGeneral,"Auto Fruit",false,function(v) autoFruit=v end)
+
+-- FRUIT: label com nome + distância
+local fruitInfo = Instance.new("TextLabel")
+fruitInfo.BackgroundTransparency = 1
+fruitInfo.Size = UDim2.new(1,-8,0,24)
+fruitInfo.TextXAlignment = Enum.TextXAlignment.Left
+fruitInfo.Font = Enum.Font.Gotham
+fruitInfo.TextSize = 15
+fruitInfo.TextColor3 = Color3.fromRGB(235,235,240)
+fruitInfo.Text = "Procurando frutas..."
+fruitInfo.Parent = pageFruit
+
+local function nearestFruitText()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return "Aguardando personagem..." end
+    -- usa suas helpers já existentes no script:
+    local node = findClosestFruit(hrp.Position, fruitNameFilter)
+    if not node then return "Nenhuma fruta encontrada." end
+    local part = node:IsA("BasePart") and node or node:FindFirstChildWhichIsA("BasePart")
+    if not part then return ("Fruta: %s (sem parte)").format(tostring(node.Name or "?")) end
+    local d = math.floor( (part.Position - hrp.Position).Magnitude )
+    local name = tostring(node.Name or node:GetFullName() or "?")
+    return ("Fruta: %s | Distância: %dm"):format(name, d)
+end
 
 -- Teleports
 local function repopulateTP()
@@ -214,3 +249,10 @@ do
 end
 
 closeBtn.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
+
+-- Atualiza texto da fruta em tempo real
+game:GetService("RunService").RenderStepped:Connect(function()
+    if fruitInfo and fruitInfo.Parent then
+        fruitInfo.Text = nearestFruitText()
+    end
+end)
